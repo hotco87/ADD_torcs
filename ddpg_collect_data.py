@@ -214,8 +214,19 @@ class DDPG(nn.Module):
 
 
 def main():  # True
-    start_time = time.time()
 
+    import os
+    buffer_dir = "./buffer_original_reward3"
+    results_dir = "./results"
+    SaveModel_dir = "./SaveModel"
+    if not os.path.exists(buffer_dir):
+        os.makedirs(buffer_dir)
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+    if not os.path.exists(SaveModel_dir):
+        os.makedirs(SaveModel_dir)
+
+    start_time = time.time()
     np.random.seed(1337)
 
     env = TorcsEnv(vision=False, throttle=True, gear_change=False)
@@ -308,7 +319,7 @@ def main():  # True
 
             if done :
                 total_reward.append(score)
-                if total_step % 1000:
+                if total_step % 10000:
                     torch.save(agent.state_dict(), './SaveModel/3DDPG_save_original_reward3' + str(total_step) + '.pth')
                     plt.plot(list(range(len(total_reward))), total_reward, c="b", lw=3, ls="--")
                     plt.xlabel("Episode")
