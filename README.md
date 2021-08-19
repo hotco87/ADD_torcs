@@ -66,6 +66,10 @@ evaluate_policy.py : evaluate policy
 ```
 
 ## TODO
-- http://xed.ch/help/torcs.html
-- 버퍼분석 (buffer_original_reward3) -> 버퍼 10배로 늘리기 -> cBCQ_model.py 에서 149 line 수정후 CBCQ 코드 다시 실행
-- normal CBCQ 보다 잘하면 됨.
+- Sensor value 참고: http://xed.ch/help/torcs.html
+- Goal:normal CBCQ 보다 잘하면 됨.
+```
+    1. 버퍼분석 (buffer_original_reward3)
+    2. 버퍼 10배로 늘리기
+    3. cBCQ_model.py 에서 149 line 수정후 CBCQ 코드 다시 실행
+```

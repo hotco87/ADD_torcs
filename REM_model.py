@@ -136,7 +136,7 @@ class REM(object):
 				actor_loss.backward()
 				self.actor_optimizer.step()
 
-				# Update the frozen target models
+				# Update the frozen target agent
 				for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
 					target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
