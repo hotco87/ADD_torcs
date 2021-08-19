@@ -18,6 +18,19 @@ class ReplayBuffer(object):
         self.raw_state = np.zeros((max_size, state_dim))
         self.raw_next_state = np.zeros((max_size, state_dim))
 
+        self.next_state1 = np.zeros((max_size, state_dim))
+        self.next_state2 = np.zeros((max_size, state_dim))
+        self.next_state3 = np.zeros((max_size, state_dim))
+        self.next_state4 = np.zeros((max_size, state_dim))
+        self.next_state5 = np.zeros((max_size, state_dim))
+        self.next_state6 = np.zeros((max_size, state_dim))
+        self.next_state7 = np.zeros((max_size, state_dim))
+        self.next_state8 = np.zeros((max_size, state_dim))
+        self.next_state9 = np.zeros((max_size, state_dim))
+        self.next_state10 = np.zeros((max_size, state_dim))
+        self.next_state_total = [self.next_state1, self.next_state2, self.next_state3, self.next_state4, self.next_state5,
+                            self.next_state6, self.next_state7, self.next_state8, self.next_state9, self.next_state10]
+
         self.device = device
 
     def add(self, state, action, next_state, reward, done , raw_state, raw_next_state):
@@ -40,6 +53,73 @@ class ReplayBuffer(object):
             torch.FloatTensor(self.state[ind]).to(self.device),
             torch.FloatTensor(self.action[ind]).to(self.device),
             torch.FloatTensor(self.next_state[ind]).to(self.device),
+            torch.FloatTensor(self.reward[ind]).to(self.device),
+            torch.FloatTensor(self.not_done[ind]).to(self.device)
+        )
+
+    def sample_aug(self, batch_size):
+        ind = np.random.randint(0, self.size, size=batch_size)
+
+        return (
+            torch.FloatTensor(self.state[ind]).to(self.device),
+            torch.FloatTensor(self.action[ind]).to(self.device),
+            torch.FloatTensor(self.next_state[ind]).to(self.device),
+            torch.FloatTensor(self.reward[ind]).to(self.device),
+            torch.FloatTensor(self.not_done[ind]).to(self.device),
+
+            (torch.FloatTensor(self.next_state1[ind]).to(self.device),
+            torch.FloatTensor(self.next_state2[ind]).to(self.device),
+            torch.FloatTensor(self.next_state3[ind]).to(self.device),
+            torch.FloatTensor(self.next_state4[ind]).to(self.device),
+            torch.FloatTensor(self.next_state5[ind]).to(self.device),
+            torch.FloatTensor(self.next_state6[ind]).to(self.device),
+            torch.FloatTensor(self.next_state7[ind]).to(self.device),
+            torch.FloatTensor(self.next_state8[ind]).to(self.device),
+            torch.FloatTensor(self.next_state9[ind]).to(self.device),
+            torch.FloatTensor(self.next_state10[ind]).to(self.device))
+        )
+
+    def sample_episode(self, n_th):
+
+        done = 1 - self.not_done
+        done_idx = np.where(done)[0]
+
+        start_point = done_idx[n_th]
+        end_point = done_idx[n_th + 1] - 1
+        num_sample = end_point - start_point + 1
+        ind = np.array(list(range(start_point, end_point + 1)))
+
+        state = np.zeros(((num_sample, self.state_history) + self.state.shape[1:]), dtype=np.uint8)
+        next_state = np.array(state)
+
+        state_not_done = 1.
+        next_not_done = 1.
+        for i in range(self.state_history):
+
+            # Wrap around if the buffer is filled
+            if self.crt_size == self.max_size:
+                j = (ind - i) % self.max_size
+                k = (ind - i + 1) % self.max_size
+            else:
+                j = ind - i
+                k = (ind - i + 1).clip(min=0)
+                # If j == -1, then we set state_not_done to 0.
+                state_not_done *= (j + 1).clip(min=0, max=1).reshape(-1, 1,
+                                                                     1)  # np.where(j < 0, state_not_done * 0, state_not_done)
+                j = j.clip(min=0)
+
+            # State should be all 0s if the episode terminated previously
+            state[:, i] = self.state[j] * state_not_done
+            next_state[:, i] = self.state[k] * next_not_done
+
+            # If this was the first timestep, make everything previous = 0
+            next_not_done *= state_not_done
+            state_not_done *= (1. - self.first_timestep[j]).reshape(-1, 1, 1)
+
+        return (
+            torch.ByteTensor(state).to(self.device).float(),
+            torch.LongTensor(self.action[ind]).to(self.device),
+            torch.ByteTensor(next_state).to(self.device).float(),
             torch.FloatTensor(self.reward[ind]).to(self.device),
             torch.FloatTensor(self.not_done[ind]).to(self.device)
         )
@@ -68,6 +148,22 @@ class ReplayBuffer(object):
         self.next_state[:self.size] = np.load(f"{save_folder}_next_state.npy")[:self.size]
         self.reward[:self.size] = reward_buffer[:self.size]
         self.not_done[:self.size] = np.load(f"{save_folder}_not_done.npy")[:self.size]
+
+    def load2(self, save_folder, save_folder2, size=-1):
+        reward_buffer = np.load(f"{save_folder}_reward.npy")
+
+        # Adjust crt_size if we're using a custom size
+        size = min(int(size), self.max_size) if size > 0 else self.max_size
+        self.size = min(reward_buffer.shape[0], size)
+
+        self.state[:self.size] = np.load(f"{save_folder}_state.npy")[:self.size]
+        self.action[:self.size] = np.load(f"{save_folder}_action.npy")[:self.size]
+        self.next_state[:self.size] = np.load(f"{save_folder}_next_state.npy")[:self.size]
+        self.reward[:self.size] = reward_buffer[:self.size]
+        self.not_done[:self.size] = np.load(f"{save_folder}_not_done.npy")[:self.size]
+
+        for i in range(10):
+            self.next_state_total[i][:self.size] = np.load(f"{save_folder2}_next_state"+str(i+1)+".npy")[:self.size]
 
         #self.raw_state[:self.size] = np.load(f"{save_folder}_raw_state.npy")[:self.size]
         #self.raw_next_state[:self.size] = np.load(f"{save_folder}_raw_next_state.npy")[:self.size]

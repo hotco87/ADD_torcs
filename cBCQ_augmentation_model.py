@@ -130,7 +130,7 @@ class BCQ(object):
 
         for it in range(iterations):
             # Sample replay buffer / batch
-            state, action, next_state, reward, not_done = replay_buffer.sample(batch_size)
+            state, action, next_state, reward, not_done, next_state_aug = replay_buffer.sample_aug(batch_size)
 
             # Variational Auto-Encoder Training
             recon, mean, std = self.vae(state, action)
@@ -147,6 +147,11 @@ class BCQ(object):
                 # Duplicate next state 10 times
                 # Todo
                 next_state = torch.repeat_interleave(next_state, 10, 0)
+                # next_state = torch.zeros(1000, 29)
+                for index, data in enumerate(next_state_aug):
+                    for index2, data2 in enumerate(data):
+                        next_state[10*index2+index] = data2
+
 
                 # Compute value of perturbed actions sampled from the VAE
                 target_Q1, target_Q2 = self.critic_target(next_state,

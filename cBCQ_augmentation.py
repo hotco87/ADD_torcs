@@ -19,7 +19,7 @@ from itertools import count
 import utils as utils
 import os
 
-import cBCQ_model as cBCQ_model
+import cBCQ_augmentation_model as cBCQ_model
 
 
 def evaluate_policy(policy, eval_episodes=2):
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #file_name = "cBCQ_torcs_failed_75_percent"
-    file_name = "cBCQ_torcs_normal_buffer"
+    file_name = "cBCQ_torcs_vae_buffer"
     # buffer_name = "%s_%s_%s" % (args.buffer_type, args.env_name, str(args.seed))
     print("---------------------------------------")
     print("Settings: " + file_name)
@@ -93,20 +93,9 @@ if __name__ == "__main__":
     policy = cBCQ_model.BCQ(state_dim, action_dim, max_action,device)
 
     buffer_name = "./buffer_original_reward3/test_buffer"
-    # Load buffer
-    # replay_buffer = utils.ReplayBuffer(state_dim, action_dim, device)
-    # replay_buffer.load(buffer_name)
-
-    # success_buffer = utils.ReplayBuffer(state_dim, action_dim, device)
-    # failed_buffer = utils.ReplayBuffer(state_dim, action_dim, device)
-    # success_buffer.load("./success_buffer/success_buffer")
-    # failed_buffer.load("./failed_buffer/failed_buffer")
-    #
-    # success_buffer.concat(failed_buffer,50000 - int(50000/75), 0, int(50000/75)) # 10 percent
-    #
-    # replay_buffer = success_buffer
+    buffer_name2 = "./buffer_original_reward3/vae_buffer"
     replay_buffer = utils.ReplayBuffer(state_dim, action_dim, device)
-    replay_buffer.load(buffer_name)
+    replay_buffer.load2(buffer_name,buffer_name2)
 
     idx_done = np.array(np.where(replay_buffer.not_done.reshape(-1) != 1)).reshape(-1)
     idx_epi_start = np.insert(idx_done + 1, 0, 0)
