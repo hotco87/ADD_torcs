@@ -108,6 +108,9 @@ if __name__ == "__main__":
     replay_buffer = utils.ReplayBuffer(state_dim, action_dim, device)
     replay_buffer.load(buffer_name)
 
+    idx_done = np.array(np.where(replay_buffer.not_done.reshape(-1) != 1)).reshape(-1)
+    idx_epi_start = np.insert(idx_done + 1, 0, 0)
+    idx_epi_end = np.append(idx_done, replay_buffer.size)
     #load policy
     #policy.load(f"./SaveModel/cBCQ_")
 
