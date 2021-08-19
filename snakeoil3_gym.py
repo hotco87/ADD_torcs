@@ -175,9 +175,9 @@ class Client():
                     os.system('pkill torcs')
                     time.sleep(1.0)
                     if self.vision is False:
-                        os.system('torcs -nofuel -nodamage -nolaptime &') #s.system('torcs -nofuel -nodamage -nolaptime -T&')
+                        os.system('torcs -nofuel -nodamage -nolaptime &')
                     else:
-                        os.system('torcs -nofuel -nodamage -nolaptime -vision &') #os.system('torcs -nofuel -nodamage -nolaptime -vision -T&')
+                        os.system('torcs -nofuel -nodamage -nolaptime -vision &')
 
                     time.sleep(1.0)
                     os.system('sh autostart.sh')
@@ -239,8 +239,7 @@ class Client():
             try:
                 # Receive server data
                 sockdata,addr= self.so.recvfrom(data_size)
-                sockdata = sockdata.decode('cp949')
-                # sockdata = sockdata.decode('utf-8')
+                sockdata = sockdata.decode('utf-8')
             except socket.error as emsg:
                 print('.', end=' ')
                 #print "Waiting for data on %d.............." % self.port
