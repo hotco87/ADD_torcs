@@ -95,5 +95,5 @@ model = VRAE(sequence_length=sequence_length,
              loss=loss,
              block=block)
 
-#TODO currently, use maximum sequence length for rnn (chunk into small size til episode done)
+# TODO currently, use maximum sequence length for rnn (chunk into small size til episode done)
 model.fit(train_dataset)
