@@ -17,7 +17,8 @@ class Encoder(nn.Module):
     :param dropout: percentage of nodes to dropout
     :param block: LSTM/GRU block
     """
-    def __init__(self, number_of_features, hidden_size, hidden_layer_depth, latent_length, dropout, block = 'LSTM'):
+
+    def __init__(self, number_of_features, hidden_size, hidden_layer_depth, latent_length, dropout, block='LSTM'):
 
         super(Encoder, self).__init__()
 
@@ -27,9 +28,9 @@ class Encoder(nn.Module):
         self.latent_length = latent_length
 
         if block == 'LSTM':
-            self.model = nn.LSTM(self.number_of_features, self.hidden_size, self.hidden_layer_depth, dropout = dropout)
+            self.model = nn.LSTM(self.number_of_features, self.hidden_size, self.hidden_layer_depth, dropout=dropout)
         elif block == 'GRU':
-            self.model = nn.GRU(self.number_of_features, self.hidden_size, self.hidden_layer_depth, dropout = dropout)
+            self.model = nn.GRU(self.number_of_features, self.hidden_size, self.hidden_layer_depth, dropout=dropout)
         else:
             raise NotImplementedError
 
@@ -50,6 +51,7 @@ class Lambda(nn.Module):
     :param hidden_size: hidden size of the encoder
     :param latent_length: latent vector length
     """
+
     def __init__(self, hidden_size, latent_length):
         super(Lambda, self).__init__()
 
@@ -78,6 +80,7 @@ class Lambda(nn.Module):
         else:
             return self.latent_mean
 
+
 class Decoder(nn.Module):
     """Converts latent vector into output
     :param sequence_length: length of the input sequence
@@ -89,7 +92,9 @@ class Decoder(nn.Module):
     :param block: GRU/LSTM - use the same which you've used in the encoder
     :param dtype: Depending on cuda enabled/disabled, create the tensor
     """
-    def __init__(self, sequence_length, batch_size, hidden_size, hidden_layer_depth, latent_length, output_size, dtype, block='LSTM'):
+
+    def __init__(self, sequence_length, batch_size, hidden_size, hidden_layer_depth, latent_length, output_size, dtype,
+                 block='LSTM'):
 
         super(Decoder, self).__init__()
 
@@ -137,10 +142,12 @@ class Decoder(nn.Module):
         out = self.hidden_to_output(decoder_output)
         return out
 
+
 def _assert_no_grad(tensor):
     assert not tensor.requires_grad, \
         "nn criterions don't compute the gradient w.r.t. targets - please " \
         "mark these tensors as not requiring gradients"
+
 
 class VRAE(nn.Module):
     """Variational recurrent auto-encoder. This module is used for dimensionality reduction of timeseries
@@ -162,6 +169,7 @@ class VRAE(nn.Module):
     :param max_grad_norm: The grad-norm to be clipped
     :param dload: Download directory where models are to be dumped
     """
+
     def __init__(self, sequence_length, number_of_features, hidden_size=90, hidden_layer_depth=2, latent_length=20,
                  batch_size=32, learning_rate=0.005, block='LSTM',
                  n_epochs=5, dropout_rate=0., optimizer='Adam', loss='MSELoss',
@@ -169,19 +177,16 @@ class VRAE(nn.Module):
 
         super(VRAE, self).__init__()
 
-
         self.dtype = torch.FloatTensor
         self.use_cuda = cuda
 
         if not torch.cuda.is_available() and self.use_cuda:
             self.use_cuda = False
 
-
         if self.use_cuda:
             self.dtype = torch.cuda.FloatTensor
 
-
-        self.encoder = Encoder(number_of_features = number_of_features,
+        self.encoder = Encoder(number_of_features=number_of_features,
                                hidden_size=hidden_size,
                                hidden_layer_depth=hidden_layer_depth,
                                latent_length=latent_length,
@@ -192,7 +197,7 @@ class VRAE(nn.Module):
                            latent_length=latent_length)
 
         self.decoder = Decoder(sequence_length=sequence_length,
-                               batch_size = batch_size,
+                               batch_size=batch_size,
                                hidden_size=hidden_size,
                                hidden_layer_depth=hidden_layer_depth,
                                latent_length=latent_length,
@@ -231,9 +236,9 @@ class VRAE(nn.Module):
 
     def __repr__(self):
         return """VRAE(n_epochs={n_epochs},batch_size={batch_size},cuda={cuda})""".format(
-                n_epochs=self.n_epochs,
-                batch_size=self.batch_size,
-                cuda=self.use_cuda)
+            n_epochs=self.n_epochs,
+            batch_size=self.batch_size,
+            cuda=self.use_cuda)
 
     def forward(self, x):
         """
@@ -269,13 +274,12 @@ class VRAE(nn.Module):
         :param X: Input tensor
         :return: total loss, reconstruction loss, kl-divergence loss and original input
         """
-        x = Variable(X[:,:,:].type(self.dtype), requires_grad = True)
+        x = Variable(X[:, :, :].type(self.dtype), requires_grad=True)
 
         x_decoded, _ = self(x)
         loss, recon_loss, kl_loss = self._rec(x_decoded, x.detach(), self.loss_fn)
 
         return loss, recon_loss, kl_loss, x
-
 
     def _train(self, train_loader):
         """
@@ -294,14 +298,14 @@ class VRAE(nn.Module):
             X = X[0]
 
             # required to swap axes, since dataloader gives output in (batch_size x seq_len x num_of_features)
-            X = X.permute(1,0,2)
+            X = X.permute(1, 0, 2)
 
             self.optimizer.zero_grad()
             loss, recon_loss, kl_loss, _ = self.compute_loss(X)
             loss.backward()
 
             if self.clip:
-                torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm = self.max_grad_norm)
+                torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=self.max_grad_norm)
 
             # accumulator
             epoch_loss += loss.item()
@@ -309,13 +313,12 @@ class VRAE(nn.Module):
             self.optimizer.step()
 
             if (t + 1) % self.print_every == 0:
-                print('Batch %d, loss = %.4f, recon_loss = %.4f, kl_loss = %.4f' % (t + 1, loss.item(),
-                                                                                    recon_loss.item(), kl_loss.item()))
+                print('Batch [{:>4d}/{:>4d}], loss = {:>8.4f}, recon_loss = {:>8.4f}, kl_loss = {:>8.4f}'.
+                      format(t + 1, len(train_loader), loss.item(), recon_loss.item(), kl_loss.item()))
 
         print('Average loss: {:.4f}'.format(epoch_loss / t))
 
-
-    def fit(self, dataset, save = False):
+    def fit(self, dataset, save=False):
         """
         Calls `_train` function over a fixed number of epochs, specified by `n_epochs`
         :param dataset: `Dataset` object
@@ -323,9 +326,9 @@ class VRAE(nn.Module):
         :return:
         """
 
-        train_loader = DataLoader(dataset = dataset,
-                                  batch_size = self.batch_size,
-                                  shuffle = True,
+        train_loader = DataLoader(dataset=dataset,
+                                  batch_size=self.batch_size,
+                                  shuffle=True,
                                   drop_last=True)
 
         for i in range(self.n_epochs):
@@ -337,7 +340,6 @@ class VRAE(nn.Module):
         if save:
             self.save('model.pth')
 
-
     def _batch_transform(self, x):
         """
         Passes the given input tensor into encoder and lambda function
@@ -345,9 +347,9 @@ class VRAE(nn.Module):
         :return: intermediate latent vector
         """
         return self.lmbd(
-                    self.encoder(
-                        Variable(x.type(self.dtype), requires_grad = False)
-                    )
+            self.encoder(
+                Variable(x.type(self.dtype), requires_grad=False)
+            )
         ).cpu().data.numpy()
 
     def _batch_reconstruct(self, x):
@@ -357,12 +359,12 @@ class VRAE(nn.Module):
         :return: reconstructed output tensor
         """
 
-        x = Variable(x.type(self.dtype), requires_grad = False)
+        x = Variable(x.type(self.dtype), requires_grad=False)
         x_decoded, _ = self(x)
 
         return x_decoded.cpu().data.numpy()
 
-    def reconstruct(self, dataset, save = False):
+    def reconstruct(self, dataset, save=False):
         """
         Given input dataset, creates dataloader, runs dataloader on `_batch_reconstruct`
         Prerequisite is that model has to be fit
@@ -373,10 +375,10 @@ class VRAE(nn.Module):
 
         self.eval()
 
-        test_loader = DataLoader(dataset = dataset,
-                                 batch_size = self.batch_size,
-                                 shuffle = False,
-                                 drop_last=True) # Don't shuffle for test_loader
+        test_loader = DataLoader(dataset=dataset,
+                                 batch_size=self.batch_size,
+                                 shuffle=False,
+                                 drop_last=True)  # Don't shuffle for test_loader
 
         if self.is_fitted:
             with torch.no_grad():
@@ -401,8 +403,7 @@ class VRAE(nn.Module):
 
         raise RuntimeError('Model needs to be fit')
 
-
-    def transform(self, dataset, save = False):
+    def transform(self, dataset, save=False):
         """
         Given input dataset, creates dataloader, runs dataloader on `_batch_transform`
         Prerequisite is that model has to be fit
@@ -412,10 +413,10 @@ class VRAE(nn.Module):
         """
         self.eval()
 
-        test_loader = DataLoader(dataset = dataset,
-                                 batch_size = self.batch_size,
-                                 shuffle = False,
-                                 drop_last=True) # Don't shuffle for test_loader
+        test_loader = DataLoader(dataset=dataset,
+                                 batch_size=self.batch_size,
+                                 shuffle=False,
+                                 drop_last=True)  # Don't shuffle for test_loader
         if self.is_fitted:
             with torch.no_grad():
                 z_run = []
@@ -438,15 +439,15 @@ class VRAE(nn.Module):
 
         raise RuntimeError('Model needs to be fit')
 
-    def fit_transform(self, dataset, save = False):
+    def fit_transform(self, dataset, save=False):
         """
         Combines the `fit` and `transform` functions above
         :param dataset: Dataset on which fit and transform have to be performed
         :param bool save: If true, dumps the model and latent vectors as pickle file
         :return: latent vectors for input dataset
         """
-        self.fit(dataset, save = save)
-        return self.transform(dataset, save = save)
+        self.fit(dataset, save=save)
+        return self.transform(dataset, save=save)
 
     def save(self, file_name):
         """

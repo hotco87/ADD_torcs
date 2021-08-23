@@ -37,24 +37,31 @@ a = np.load('./buffer_original_reward3/test_buffer_action.npy')
 r = np.load('./buffer_original_reward3/test_buffer_reward.npy')
 s_ = np.load('./buffer_original_reward3/test_buffer_next_state.npy')
 not_done = np.load('./buffer_original_reward3/test_buffer_not_done.npy')
-# train_loader = torch.utils.data.DataLoader(s_prime, batch_size=args.batch_size, shuffle=True)
-# test_loader = torch.utils.data.DataLoader(s_prime, batch_size=args.batch_size, shuffle=True)
 
 idx_done = np.array(np.where(not_done.reshape(-1) != 1))
 idx_epi_start = np.insert(idx_done + 1, 0, 0)
 idx_epi_end = np.append(idx_done, not_done.size)
 epi_idxes = zip(idx_epi_start, idx_epi_end)
 
+min_sequence_len = np.min(np.diff(idx_done, 1))
 max_sequence_len = np.max(np.diff(idx_done, 1))
 
+# episodes = []
+# for start, finish in epi_idxes:
+#     current_episode = s[start:finish]
+#     padded_current_episode = np.concatenate(
+#         (current_episode, np.zeros((max_sequence_len - current_episode.shape[0], 29))), axis=0)
+#     episodes.append(padded_current_episode)
+# episodes = np.stack(episodes)
+
+seq_len = 8
 episodes = []
 for start, finish in epi_idxes:
     current_episode = s[start:finish]
-    padded_current_episode = np.concatenate(
-        (current_episode, np.zeros((max_sequence_len - current_episode.shape[0], 29))), axis=0)
-    episodes.append(padded_current_episode)
+    frag = [np.array(current_episode[i:i + seq_len]) for i in range(len(current_episode) - seq_len)]
+    episodes.append(np.stack(frag))
+episodes = np.concatenate(episodes)
 
-episodes = np.stack(episodes)
 train_dataset = TensorDataset(torch.from_numpy(episodes))
 test_dataset = TensorDataset(torch.from_numpy(episodes))
 
@@ -64,11 +71,11 @@ hidden_layer_depth = 1
 latent_length = 64
 batch_size = 32
 learning_rate = 0.0005
-n_epochs = 1000
+n_epochs = 50
 dropout_rate = 0.2
 optimizer = 'Adam'  # options: ADAM, SGD
 cuda = True  # options: True, False
-print_every = 30
+print_every = 200
 clip = True  # options: True, False
 max_grad_norm = 5
 loss = 'MSELoss'  # options: SmoothL1Loss, MSELoss
@@ -95,5 +102,5 @@ model = VRAE(sequence_length=sequence_length,
              loss=loss,
              block=block)
 
-# TODO currently, use maximum sequence length for rnn (chunk into small size til episode done)
 model.fit(train_dataset)
+model.save('SaveModel/vrae_s_model.pth')
