@@ -104,3 +104,9 @@ model = VRAE(sequence_length=sequence_length,
 
 model.fit(train_dataset)
 model.save('SaveModel/vrae_s_model.pth')
+
+x_decoded = model.fit_transform(test_dataset)
+
+print('asdf')
+
+

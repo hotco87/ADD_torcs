@@ -7,7 +7,6 @@ from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
 
-
 parser = argparse.ArgumentParser(description='VAE MNIST Example')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 128)')
@@ -29,14 +28,12 @@ device = torch.device("cuda" if args.cuda else "cpu")
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 import numpy as np
-s_prime = np.load("./buffer_original_reward3/test_buffer_next_state.npy")
-train_loader = torch.utils.data.DataLoader(
-    s_prime,
-    batch_size=args.batch_size, shuffle=True)
 
-test_loader = torch.utils.data.DataLoader(
-    s_prime,
-    batch_size=args.batch_size, shuffle=True)
+s_prime = np.load("./buffer_original_reward3/test_buffer_next_state.npy")
+train_loader = torch.utils.data.DataLoader(s_prime, batch_size=args.batch_size, shuffle=True)
+
+test_loader = torch.utils.data.DataLoader(s_prime, batch_size=args.batch_size, shuffle=True)
+
 
 #
 # class VAE1(nn.Module):
@@ -89,8 +86,8 @@ class VAE(nn.Module):
         self.device = device
 
     def forward(self, state):
-        z = F.relu(self.e1(state))
-        z = F.relu(self.e2(z))
+        z = F.elu(self.e1(state))
+        z = F.elu(self.e2(z))
 
         mean = self.mean(z)
         # Clamped for numerical stability
@@ -112,6 +109,7 @@ class VAE(nn.Module):
         a = F.relu(self.d2(a))
         return self.d3(a)
 
+
 model = VAE().to(device)
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
@@ -125,7 +123,7 @@ def loss_function(recon_x, x, mu, logvar):
     # https://arxiv.org/abs/1312.6114
     # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
     KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
-    #KL_loss = -0.5 * (1 + torch.log(std.pow(2)) - mean.pow(2) - std.pow(2)).mean()
+    # KL_loss = -0.5 * (1 + torch.log(std.pow(2)) - mean.pow(2) - std.pow(2)).mean()
 
     return BCE + KLD
 
@@ -145,11 +143,18 @@ def train(epoch):
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader),
-                loss.item() / len(data)))
+                       100. * batch_idx / len(train_loader),
+                       loss.item() / len(data)))
 
-    print('====> Epoch: {} Average loss: {:.4f}'.format(
-          epoch, train_loss / len(train_loader.dataset)))
+    print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, train_loss / len(train_loader.dataset)))
+
+    model.eval()
+    sample = next(iter(train_loader))[0]
+    recon_batch, mu, logvar = model(sample.reshape(1, 29).float().cuda())
+
+    print('sample\n{}'.format(np.array(sample.cpu())))
+    print('recon\n{}'.format(np.array(sample.cpu())))
+
 
 
 def test(epoch):
@@ -169,16 +174,16 @@ def test(epoch):
                     np.save("generated_sample_data.npy", data.cpu().numpy())
                     np.save("generated_data.npy", sample.numpy())
 
-
             # if i == 0:
             #     n = min(data.size(0), 8)
             #     comparison = torch.cat([data[:n],
             #                           recon_batch.view(args.batch_size, 1, 29)[:n]])
-                # save_image(comparison.cpu(),
-                #          'results/reconstruction_' + str(epoch) + '.png', nrow=n)
+            # save_image(comparison.cpu(),
+            #          'results/reconstruction_' + str(epoch) + '.png', nrow=n)
 
     test_loss /= len(test_loader.dataset)
     print('====> Test set loss: {:.4f}'.format(test_loss))
+
 
 if __name__ == "__main__":
     for epoch in range(1, args.epochs + 1):
